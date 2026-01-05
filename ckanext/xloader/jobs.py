@@ -30,6 +30,8 @@ from ckan.lib.api_token import get_user_from_token
 log = logging.getLogger(__name__)
 
 SSL_VERIFY = asbool(config.get('ckanext.xloader.ssl_verify', True))
+log.info("SSL Tell Me WHY")
+log.info(SSL_VERIFY)
 if not SSL_VERIFY:
     requests.packages.urllib3.disable_warnings()
 
