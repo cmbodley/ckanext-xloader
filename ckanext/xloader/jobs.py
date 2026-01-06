@@ -470,7 +470,25 @@ def get_response(url, headers):
         if 'ckan.download_proxy' in config:
             proxy = config.get('ckan.download_proxy')
             kwargs['proxies'] = {'http': proxy, 'https': proxy}
-        return requests.get(url, **kwargs)
+        import ssl
+        from urllib3.util.ssl_ import create_urllib3_context
+        from requests.adapters import HTTPAdapter
+
+        # Create a context that matches your successful 'openssl s_client' test
+        # 0x4 is the internal flag for OP_LEGACY_SERVER_CONNECT
+        ctx = create_urllib3_context()
+        ctx.set_ciphers('DEFAULT@SECLEVEL=1')
+        ctx.options |= 0x4 
+        ctx.check_hostname = False # Avoid SNI/Hostname mismatches if any
+
+        class LegacyAdapter(HTTPAdapter):
+            def init_poolmanager(self, *args, **kwargs):
+                kwargs['ssl_context'] = ctx
+                return super(LegacyAdapter, self).init_poolmanager(*args, **kwargs)
+
+        session = requests.Session()
+        session.mount("https://", LegacyAdapter())
+        return session.get(url, **kwargs)
     response = get_url()
     if response.status_code == 202:
         # Seen: https://data-cdfw.opendata.arcgis.com/datasets
